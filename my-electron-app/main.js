@@ -3,13 +3,13 @@ const { spawn } = require('child_process');
 
 function javaApplication(succCallback, closeCallback, errCallback) {
     // 启动 Java 服务端
-    const javaProcess = spawn('java', ['-jar', '../server/target/server-0.0.1-SNAPSHOT.jar']);
+    const javaProcess = spawn('java', ['-jar', '../server/target/tc-electron-server-1.1.0.jar']);
 
     // 监听 Java 进程的输出
     javaProcess.stdout.on('data', (data) => {
         const log = data.toString()
         console.log(`Java stdout: ${log}`);
-        if (log && log.indexOf("Started ServerApplication in") != -1) {
+        if (log && log.indexOf("started on port") != -1) {
             console.log("服务端已经启动，启动主窗口")
             succCallback && succCallback();
         }
