@@ -1,14 +1,11 @@
-package com.tc;
+package com.minibyte;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ServerApplication {
-
+public class ElectronServerApplication {
     public static void main(String[] args) {
-        // Started ServerApplication in
-        SpringApplication.run(ServerApplication.class, args);
+        SpringApplication.run(ElectronServerApplication.class, args);
     }
-
 }

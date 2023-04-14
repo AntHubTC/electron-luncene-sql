@@ -1,0 +1,50 @@
+server:
+  port: 7777
+
+spring:
+  application:
+    name: tc-electron-server
+  mvc:
+    static-path-pattern: /static/**
+    view:
+      suffix: .html
+      prefix: classpath:templates/
+  devtools:
+    restart:
+      enabled: false # 乱求重启，关闭掉!
+  h2:
+    console:
+      path: /h2
+      enabled: true
+      settings:
+        web-allow-others: true
+  datasource:
+    driver-class-name: org.h2.Driver
+#    schema: classpath:db/schema-h2.sql  # 每次启动程序，都会运行以对数据库操作
+    # data: classpath:db/data-h2.sql  # 每次启动程序，都会运行以对数据库的数据操作
+    # url: jdbc:h2:mem:test #配置h2数据库的连接地址
+    #配置h2数据库的连接地址    h2数据库有时会出现.mv.db数据存储文件，有时会有.h2.db存储文件。在连接时需要加上;MV_STORE=false
+    url: jdbc:h2:file:./db/tc-electron-server;MV_STORE=false;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false;
+    username: MiniByte
+    # 设置密码 ALTER USER sa SET PASSWORD 'custom' // TODO:tc: 这里有泄露密码的风险，后续将数据库和sql分离开，重要sql单独备份存储，出一个数据库搭建手册。
+    password: teJFS*&@#123
+  redis:
+    database: 13
+    host: 112.168.83.92
+    password: 6wCxRYWzhhmiPNJo
+    port: 6379
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-value: 0
+      logic-not-delete-value: 1
+  # mybatis-plus的日志开启配置，不能使用mybatis的，会找不到
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+swagger:
+  enable: true
+  application-name: ${spring.application.name}
+  application-version: 1.0
+  application-description: tc-electron-server doc
+  try-host: http://localhost:${server.port}
+  base-package: com.minibyte

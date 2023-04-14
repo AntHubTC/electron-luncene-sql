@@ -1,0 +1,9 @@
+{
+   "name": "dev-assistant-chrome",
+   "version": "1.0.0",
+   "description": "开发助手新tab页搜索引擎页面",
+   "manifest_version": 3,
+   "chrome_url_overrides": {
+      "newtab": "newTab.html"
+   }
+}
