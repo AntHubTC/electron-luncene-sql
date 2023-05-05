@@ -2,18 +2,22 @@ package com.minibyte.service;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import com.minibyte.bo.pojo.app.UpdateDocDto;
 import com.minibyte.common.enums.SQL_FILE_IDX_FILED;
 import com.minibyte.common.exception.MBBizException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.cn.smart.SmartChineseAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.*;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Service;
@@ -67,16 +71,14 @@ public class FileIndexWriterService {
     }
 
     public void run () throws Exception{
-        List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用"); // TODO:tc: 删除文档怎么做，内存村一个这个文件数量，如果检测到这个文件数量减少了，那么执行一次索引移除的检查，或者内存存一份文件列表，如果这个文件列表变少了就对比少了什么文件删除对应的索引
+        List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用");
+        // TODO:tc: 删除文档怎么做，内存村一个这个文件数量，如果检测到这个文件数量减少了，那么执行一次索引移除的检查，或者内存存一份文件列表，如果这个文件列表变少了就对比少了什么文件删除对应的索引
         if (CollUtil.isEmpty(files)) {
             return;
         }
 
         // 设置索引存储路径
-        Directory indexDir = null;
-        try {
-            indexDir = FSDirectory.open(new File(INDEX_DIR).toPath());
-
+        try (Directory indexDir = FSDirectory.open(new File(INDEX_DIR).toPath())) {
             // 创建索引配置对象，使用标准分词器
             // IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
             IndexWriterConfig config = new IndexWriterConfig(new SmartChineseAnalyzer());
@@ -85,30 +87,33 @@ public class FileIndexWriterService {
             // 创建索引写入器
             IndexWriter indexWriter = new IndexWriter(indexDir, config);
 
+            // 创建索引读取器
+            IndexReader indexReader = DirectoryReader.open(indexDir);
+
             // 读取本地文件，并将内容创建成Document对象
             Collection<Document> addDocs = new ArrayList<>();
-            Collection<Document> updateDocs = new ArrayList<>();
+            Collection<UpdateDocDto> updateDocs = new ArrayList<>();
 
             for (File file : files) {
                 if (checkFile(file)) {
-                    collectFileDocs(file, addDocs, updateDocs);
+                    collectFileDocs(file, indexReader, addDocs, updateDocs);
                 }
             }
 
             // 将Document对象添加到索引中
             indexWriter.addDocuments(addDocs);
-            // indexWriter.updateDocument(updateDocs)
+            for (UpdateDocDto updateDoc : updateDocs) {
+                indexWriter.updateDocument(updateDoc.getTerm(), updateDoc.getDocument());
+            }
 
-            if (CollUtil.isNotEmpty(addDocs)) {
+            if (CollUtil.isNotEmpty(addDocs) || CollUtil.isNotEmpty(updateDocs)) {
                 // 提交
                 indexWriter.commit();
             }
             // 关闭索引写入器
             indexWriter.close();
-        } finally {
-            if (null != indexDir) {
-                indexDir.close();
-            }
+            // 关闭索引读取器
+            indexReader.close();
         }
     }
 
@@ -122,34 +127,43 @@ public class FileIndexWriterService {
 
     private static final String NAME_PREFIX = "-- @name";
     private static final String DETAIL_PREFIX = "-- @detail";
-    private void collectFileDocs(File file, Collection<Document> addDocs, Collection<Document> updateDocs) {
+    private void collectFileDocs(File file, IndexReader indexReader, Collection<Document> addDocs, Collection<UpdateDocDto> updateDocs) throws Exception {
         log.info("正在索引文件:{}", file.toString());
-
-        String fileHash1 = getFileHash(Collections.singletonList(file.getAbsolutePath() + file.length()));
-        log.debug("fileHash:{}", fileHash1);
-
-        boolean isUpdate = false;
-        // TODO:tc: 通过搜索，查看索引中是否存在了这个文件；
-        // TODO:tc: 如果简单检测这个文件存在，这个时候可以再检测一次文件hash是否发生变化；
-
         List<String> lines = FileUtil.readLines(file, StandardCharsets.UTF_8);
         Map<String, String> metaInfo = readContentMetaInfo(lines);
         String content = CollUtil.join(lines, "\r\n");
-        String fileHash2 = getFileHash(lines);
-        log.debug("fileHash2:{}", fileHash2);
+
+        String fileSizeHash = getFileHash(Collections.singletonList(file.getAbsolutePath() + file.length()));
+        log.debug("fileHash:{}", fileSizeHash);
+        String fileContentHash = getFileHash(lines);
+        log.debug("fileHash2:{}", fileContentHash);
 
         // 创建文档对象
         Document document1 = new Document();
         document1.add(new TextField(SQL_FILE_IDX_FILED.fileName, file.getName(), Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.filePath, file.getPath(), Field.Store.YES));
-        document1.add(new StringField(SQL_FILE_IDX_FILED.fileSizeHash, fileHash1, Field.Store.YES));
-        document1.add(new StringField(SQL_FILE_IDX_FILED.fileContentHash, fileHash2, Field.Store.YES));
+        document1.add(new StringField(SQL_FILE_IDX_FILED.fileSizeHash, fileSizeHash, Field.Store.YES));
+        document1.add(new StringField(SQL_FILE_IDX_FILED.fileContentHash, fileContentHash, Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.sqlName, metaInfo.get(NAME_PREFIX), Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.detail, metaInfo.getOrDefault(DETAIL_PREFIX, metaInfo.get(NAME_PREFIX)), Field.Store.YES));
         document1.add(new TextField(SQL_FILE_IDX_FILED.content, content, Field.Store.YES));
 
-        if (isUpdate) {
-            updateDocs.add(document1);
+        // 通过文件路径搜索，查看索引中是否存在了这个文件；
+        QueryParser queryParser = new QueryParser(SQL_FILE_IDX_FILED.filePath, new SmartChineseAnalyzer());
+        Query query = queryParser.parse(fileSizeHash);
+        IndexSearcher indexSearcher = new IndexSearcher(indexReader);
+        TopDocs topDocs = indexSearcher.search(query, 1);
+        boolean existFile = topDocs.totalHits.value > 0;
+
+        if (existFile) {
+            int docId = topDocs.scoreDocs[0].doc;
+            Document doc = indexReader.document(docId);
+            String oldFileSizeHash = doc.get(SQL_FILE_IDX_FILED.fileSizeHash);
+            String oldFileContentHash = doc.get(SQL_FILE_IDX_FILED.fileContentHash);
+            // 只要有一个不匹配就要进行更新
+            if (!fileSizeHash.equals(oldFileSizeHash) || !fileContentHash.equals(oldFileContentHash)) {
+                updateDocs.add(new UpdateDocDto(new Term(SQL_FILE_IDX_FILED.filePath, file.getPath()), document1));
+            }
         } else {
             addDocs.add(document1);
         }
