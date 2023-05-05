@@ -67,7 +67,7 @@ public class FileIndexWriterService {
     }
 
     public void run () throws Exception{
-        List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用");
+        List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用"); // TODO:tc: 删除文档怎么做，内存村一个这个文件数量，如果检测到这个文件数量减少了，那么执行一次索引移除的检查，或者内存存一份文件列表，如果这个文件列表变少了就对比少了什么文件删除对应的索引
         if (CollUtil.isEmpty(files)) {
             return;
         }
@@ -129,6 +129,8 @@ public class FileIndexWriterService {
         log.debug("fileHash:{}", fileHash1);
 
         boolean isUpdate = false;
+        // TODO:tc: 通过搜索，查看索引中是否存在了这个文件；
+        // TODO:tc: 如果简单检测这个文件存在，这个时候可以再检测一次文件hash是否发生变化；
 
         List<String> lines = FileUtil.readLines(file, StandardCharsets.UTF_8);
         Map<String, String> metaInfo = readContentMetaInfo(lines);
