@@ -26,11 +26,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 文件索引服务
@@ -63,7 +59,7 @@ public class FileIndexWriterService {
             Document document = reader.document(i);
             System.out.println(" fileName:" + document.get(SQL_FILE_IDX_FILED.fileName));
             System.out.println(" filePath:" + document.get(SQL_FILE_IDX_FILED.filePath));
-            System.out.println(" name:" + document.get(SQL_FILE_IDX_FILED.name));
+            System.out.println(" name:" + document.get(SQL_FILE_IDX_FILED.sqlName));
             System.out.println(" detail:" + document.get(SQL_FILE_IDX_FILED.detail));
             System.out.println(" content:" + document.get(SQL_FILE_IDX_FILED.content));
             System.out.println();
@@ -90,18 +86,20 @@ public class FileIndexWriterService {
             IndexWriter indexWriter = new IndexWriter(indexDir, config);
 
             // 读取本地文件，并将内容创建成Document对象
-            Collection<Document> docs = new ArrayList<>();
+            Collection<Document> addDocs = new ArrayList<>();
+            Collection<Document> updateDocs = new ArrayList<>();
 
             for (File file : files) {
                 if (checkFile(file)) {
-                    appendFileDocs(file, docs);
+                    collectFileDocs(file, addDocs, updateDocs);
                 }
             }
 
             // 将Document对象添加到索引中
-            indexWriter.addDocuments(docs);
+            indexWriter.addDocuments(addDocs);
+            // indexWriter.updateDocument(updateDocs)
 
-            if (CollUtil.isNotEmpty(docs)) {
+            if (CollUtil.isNotEmpty(addDocs)) {
                 // 提交
                 indexWriter.commit();
             }
@@ -124,21 +122,25 @@ public class FileIndexWriterService {
 
     private static final String NAME_PREFIX = "-- @name";
     private static final String DETAIL_PREFIX = "-- @detail";
-    private void appendFileDocs(File file, Collection<Document> docs) {
+    private void collectFileDocs(File file, Collection<Document> docs, Collection<Document> updateDocs) {
         log.info("正在索引文件:{}", file.toString());
+
+        String fileHash1 = getFileHash(Collections.singletonList(file.getAbsolutePath() + file.length()));
+        log.debug("fileHash:{}", fileHash1);
 
         List<String> lines = FileUtil.readLines(file, StandardCharsets.UTF_8);
         Map<String, String> metaInfo = readContentMetaInfo(lines);
         String content = CollUtil.join(lines, "\r\n");
-        // String fileHash = getFileHash(file);
-        String fileHash = getFileHash(lines);
-        log.debug("fileHash:{}", fileHash);
+        String fileHash2 = getFileHash(lines);
+        log.debug("fileHash2:{}", fileHash2);
 
         // 创建文档对象
         Document document1 = new Document();
-        document1.add(new StringField(SQL_FILE_IDX_FILED.fileName, file.getName(), Field.Store.YES));
+        document1.add(new TextField(SQL_FILE_IDX_FILED.fileName, file.getName(), Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.filePath, file.getPath(), Field.Store.YES));
-        document1.add(new StringField(SQL_FILE_IDX_FILED.name, metaInfo.get(NAME_PREFIX), Field.Store.YES));
+        document1.add(new StringField(SQL_FILE_IDX_FILED.fileSizeHash, fileHash1, Field.Store.YES));
+        document1.add(new StringField(SQL_FILE_IDX_FILED.fileContentHash, fileHash2, Field.Store.YES));
+        document1.add(new StringField(SQL_FILE_IDX_FILED.sqlName, metaInfo.get(NAME_PREFIX), Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.detail, metaInfo.getOrDefault(DETAIL_PREFIX, metaInfo.get(NAME_PREFIX)), Field.Store.YES));
         document1.add(new TextField(SQL_FILE_IDX_FILED.content, content, Field.Store.YES));
         docs.add(document1);
