@@ -122,11 +122,13 @@ public class FileIndexWriterService {
 
     private static final String NAME_PREFIX = "-- @name";
     private static final String DETAIL_PREFIX = "-- @detail";
-    private void collectFileDocs(File file, Collection<Document> docs, Collection<Document> updateDocs) {
+    private void collectFileDocs(File file, Collection<Document> addDocs, Collection<Document> updateDocs) {
         log.info("正在索引文件:{}", file.toString());
 
         String fileHash1 = getFileHash(Collections.singletonList(file.getAbsolutePath() + file.length()));
         log.debug("fileHash:{}", fileHash1);
+
+        boolean isUpdate = false;
 
         List<String> lines = FileUtil.readLines(file, StandardCharsets.UTF_8);
         Map<String, String> metaInfo = readContentMetaInfo(lines);
@@ -143,7 +145,12 @@ public class FileIndexWriterService {
         document1.add(new StringField(SQL_FILE_IDX_FILED.sqlName, metaInfo.get(NAME_PREFIX), Field.Store.YES));
         document1.add(new StringField(SQL_FILE_IDX_FILED.detail, metaInfo.getOrDefault(DETAIL_PREFIX, metaInfo.get(NAME_PREFIX)), Field.Store.YES));
         document1.add(new TextField(SQL_FILE_IDX_FILED.content, content, Field.Store.YES));
-        docs.add(document1);
+
+        if (isUpdate) {
+            updateDocs.add(document1);
+        } else {
+            addDocs.add(document1);
+        }
     }
 
     private String getFileHash(List<String> lines) {
