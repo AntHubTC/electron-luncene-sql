@@ -74,7 +74,7 @@ public class LunceneTest {
             // 取出文档得分
             System.out.println("得分： " + scoreDoc.score);
         }
-
+        directory.close();
     }
 
     private void indexWrite() throws IOException {
