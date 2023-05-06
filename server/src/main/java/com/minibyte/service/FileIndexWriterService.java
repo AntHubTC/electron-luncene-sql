@@ -47,8 +47,8 @@ public class FileIndexWriterService {
 
     public static void main(String[] args) throws Exception {
         long start = System.currentTimeMillis();
-//        new FileIndexWriterService().run();
-        new FileIndexWriterService().list();
+        new FileIndexWriterService().run();
+//        new FileIndexWriterService().list();
         long end = System.currentTimeMillis();
         System.out.println(end-start);
     }
@@ -71,7 +71,6 @@ public class FileIndexWriterService {
 
     public void run () throws Exception{
         List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用");
-        // TODO:tc: 删除文档怎么做，内存村一个这个文件数量，如果检测到这个文件数量减少了，那么执行一次索引移除的检查，或者内存存一份文件列表，如果这个文件列表变少了就对比少了什么文件删除对应的索引
         if (CollUtil.isEmpty(files)) {
             return;
         }
