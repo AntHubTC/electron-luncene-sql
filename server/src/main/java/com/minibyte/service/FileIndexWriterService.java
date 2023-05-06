@@ -2,21 +2,20 @@ package com.minibyte.service;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ArrayUtil;
 import com.minibyte.bo.pojo.app.UpdateDocDto;
 import com.minibyte.common.enums.SQL_FILE_IDX_FILED;
 import com.minibyte.common.exception.MBBizException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.cn.smart.SmartChineseAnalyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -48,8 +47,8 @@ public class FileIndexWriterService {
 
     public static void main(String[] args) throws Exception {
         long start = System.currentTimeMillis();
-        new FileIndexWriterService().run();
-//        new FileIndexWriterService().list();
+//        new FileIndexWriterService().run();
+        new FileIndexWriterService().list();
         long end = System.currentTimeMillis();
         System.out.println(end-start);
     }
@@ -77,13 +76,16 @@ public class FileIndexWriterService {
             return;
         }
 
+        File indexDirFile = new File(INDEX_DIR);
+        ensureExistIndexLab(indexDirFile);
+
         // 设置索引存储路径
-        try (Directory indexDir = FSDirectory.open(new File(INDEX_DIR).toPath())) {
+        try (Directory indexDir = FSDirectory.open(indexDirFile.toPath())) {
             // 创建索引配置对象，使用标准分词器
             // IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
             IndexWriterConfig config = new IndexWriterConfig(new SmartChineseAnalyzer());
             // 设置是否清空索引库中的数据
-            config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+            config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
             // 创建索引写入器
             IndexWriter indexWriter = new IndexWriter(indexDir, config);
 
@@ -101,7 +103,9 @@ public class FileIndexWriterService {
             }
 
             // 将Document对象添加到索引中
-            indexWriter.addDocuments(addDocs);
+            if (CollUtil.isNotEmpty(addDocs)) {
+                indexWriter.addDocuments(addDocs);
+            }
             for (UpdateDocDto updateDoc : updateDocs) {
                 indexWriter.updateDocument(updateDoc.getTerm(), updateDoc.getDocument());
             }
@@ -114,6 +118,26 @@ public class FileIndexWriterService {
             indexWriter.close();
             // 关闭索引读取器
             indexReader.close();
+        }
+    }
+
+    /**
+     * 确保索引库存在
+     * @param indexDirFile
+     * @throws Exception
+     */
+    private void ensureExistIndexLab(File indexDirFile) throws Exception {
+        if (ArrayUtil.isNotEmpty(indexDirFile.list())) {
+            return;
+        }
+        try (Directory indexDir = FSDirectory.open(indexDirFile.toPath())) {
+            IndexWriterConfig config = new IndexWriterConfig(new SmartChineseAnalyzer());
+            // 设置是否清空索引库中的数据
+            config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+            // 创建索引写入器
+            IndexWriter indexWriter = new IndexWriter(indexDir, config);
+            // 关闭索引写入器
+            indexWriter.close();
         }
     }
 
@@ -149,8 +173,11 @@ public class FileIndexWriterService {
         document1.add(new TextField(SQL_FILE_IDX_FILED.content, content, Field.Store.YES));
 
         // 通过文件路径搜索，查看索引中是否存在了这个文件；
-        QueryParser queryParser = new QueryParser(SQL_FILE_IDX_FILED.filePath, new SmartChineseAnalyzer());
-        Query query = queryParser.parse(fileSizeHash);
+        // https://blog.csdn.net/yelllowcong/article/details/78698506
+//        QueryParser queryParser = new QueryParser(SQL_FILE_IDX_FILED.filePath, new SimpleAnalyzer());
+//        Query query = queryParser.parse(file.getPath());
+//        IndexSearcher indexSearcher = new IndexSearcher(indexReader);
+        Query query = new TermQuery(new Term(SQL_FILE_IDX_FILED.filePath, file.getPath()));
         IndexSearcher indexSearcher = new IndexSearcher(indexReader);
         TopDocs topDocs = indexSearcher.search(query, 1);
         boolean existFile = topDocs.totalHits.value > 0;
