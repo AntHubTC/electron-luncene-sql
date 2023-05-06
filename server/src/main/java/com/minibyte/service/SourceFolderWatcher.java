@@ -19,7 +19,7 @@ public class SourceFolderWatcher {
 
         // 开始监听文件变化
         while (true) {
-            WatchKey key = watchService.take();
+            WatchKey key = watchService.take();// tabke方法会阻塞到有变化的时候继续执行
             for (WatchEvent<?> event : key.pollEvents()) {
                 WatchEvent.Kind<?> kind = event.kind();
                 if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY || kind == ENTRY_DELETE) {
