@@ -70,7 +70,7 @@ public class FileIndexWriterService {
     }
 
     public void run () throws Exception{
-        List<File> files = FileUtil.loopFiles("D:\\xinchao\\sql_index\\SSP常用");
+        List<File> files = FileUtil.loopFiles("F:\\2_STUDY\\testspace\\electronLearn\\electron-learn\\server\\res\\test\\SSP常用");
         if (CollUtil.isEmpty(files)) {
             return;
         }

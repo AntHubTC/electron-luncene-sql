@@ -1,0 +1,70 @@
+POST http://localhost:8080/fileIndex/search
+Content-Type: application/json
+
+{
+  "conditions": [
+    {
+       "type":  "4",
+       "value": "select premises.id"
+    }
+  ]
+}
+
+<> 2023-05-09T234140.200.json
+
+###
+
+POST http://localhost:8080/fileIndex/search
+Content-Type: application/json
+
+{
+  "conditions": [
+    {
+       "type":  "4",
+       "value": "select"
+    }
+  ]
+}
+
+<> 2023-05-09T234114.200.json
+
+###
+
+POST http://localhost:8080/fileIndex/search
+Content-Type: application/json
+
+{
+  "conditions": [
+    {
+       "type":  "4",
+       "value": "select"
+    }
+  ]
+}
+
+<> 2023-05-09T234036.500.json
+
+###
+
+POST http://localhost:8080/fileIndex/search
+Content-Type: application/json
+
+{
+  "conditions": [
+    {
+       "type":  "4",
+       "value": "select"
+    }
+  ]
+}
+
+<> 2023-05-09T234022.500.json
+
+###
+
+POST http://localhost:8080/fileIndex/search
+
+<> 2023-05-09T233339.500.json
+
+###
+
