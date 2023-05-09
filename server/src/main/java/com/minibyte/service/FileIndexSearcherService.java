@@ -7,13 +7,10 @@ import com.minibyte.bo.pojo.app.SqlSearchDto;
 import com.minibyte.common.enums.SQL_FILE_IDX_FILED;
 import com.minibyte.common.exception.MBBizException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.cn.smart.SmartChineseAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
@@ -23,7 +20,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Service;
 
-import javax.swing.text.Highlighter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -79,7 +75,7 @@ public class FileIndexSearcherService {
                 if (StrUtil.isBlank(condition.getValue())) {
                    continue;
                 }
-                QueryParser queryParser = new QueryParser(getFieldByType(condition.getType()), new StandardAnalyzer());
+                QueryParser queryParser = new QueryParser(getFieldByType(condition.getType()), new SmartChineseAnalyzer());
                 Query query = queryParser.parse(condition.getValue());
                 builder.add(query, BooleanClause.Occur.MUST);
             }
@@ -87,7 +83,7 @@ public class FileIndexSearcherService {
 
             TopDocs topDocs = indexSearcher.search(query, 100);
             log.info("命中目标:{}个", topDocs.totalHits);
-            UnifiedHighlighter highlighter = new UnifiedHighlighter(indexSearcher, new StandardAnalyzer());
+            UnifiedHighlighter highlighter = new UnifiedHighlighter(indexSearcher, new SmartChineseAnalyzer());
             highlighter.setFormatter(new DefaultPassageFormatter());
 
             String[] contentHightFragments = highlighter.highlight("content", query, topDocs, 100); // 获取高亮显示结果
