@@ -1,0 +1,57 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.main-box  {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    background-color: rgb(250, 255, 253);
+}
+
+.main-box .el-select {
+    width: 100%;
+}
+
+.main-box .clazz-a {
+    width: 100px;
+}
+
+.main-box .clazz-b {
+    width: calc(100% - 220px);
+}
+
+.main-box .clazz-c {
+    width: 100px;
+    margin-left: 5px;
+}
+
+.content-box {
+    padding-top: 10px;
+}
+
+.content-box .content-item {
+    border: 1px solid rgb(212, 194, 182);
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 5px;
+}
+
+.content-box .content-item .item-title {
+    font-weight: bolder;
+    width: 80px;
+    text-align: right;
+    display: inline-block;
+}
+
+.content-box b {
+    color: red;
+}
