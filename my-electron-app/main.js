@@ -13,6 +13,10 @@ function javaApplication(succCallback, closeCallback, errCallback) {
             console.log("服务端已经启动，启动主窗口")
             succCallback && succCallback();
         }
+        if (log && log.indexOf("Web server failed to start") != -1) {
+            // 启动失败直接退出
+            app.quit();
+        }
     });
 
     javaProcess.stderr.on('data', (data) => {

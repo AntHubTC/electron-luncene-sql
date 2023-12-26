@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --win",
-    "package": "electron-packager . myapp --platform=win32 --arch=x64 --out=dist --overwrite",
+    "package": "electron-packager . DataFixApp --platform=win32 --arch=x64 --out=dist --overwrite",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
